@@ -2,73 +2,106 @@ package repository
 
 import (
 	"context"
-	"errors"
+	//"errors"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
+	//"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	//"log/syslog"
 	"sync"
-	"taskOne/entity"
-	"taskOne/mongodatabase"
+	"taskOne/models"
+	//"taskOne/mongodatabase"
 )
 
-var (
-	data    []entity.Entity
-	nextID  int
-	dataMux sync.Mutex
-)
+//var (
+//	nextID  int
+//	dataMux sync.Mutex
+//)
 
-func Create(entity *entity.Entity) {
-	dataMux.Lock()
-	defer dataMux.Unlock()
-	nextID++
-	entity.ID = nextID
-	data = append(data, *entity)
-	fmt.Println(entity)
-	_, err := mongodatabase.Collection.InsertOne(context.Background(), entity)
+var repository *Repository
+var repoOnce sync.Once
+
+type Repository struct {
+	database *mongo.Database
+}
+
+func NewCategoryRepo(db *mongo.Database) *Repository {
+
+	repoOnce.Do(func() {
+		repository = &Repository{
+			database: db,
+		}
+	})
+	return repository
+	//client := mongodatabase.Init()
+	//var Collection *mongo.Collection
+	//Collection = client.Database("mydb").Collection("entities")
+	//return &Repo{
+	//	collection: Collection,
+	//}, nil
+}
+
+func (r *Repository) Create(ctx context.Context, entity *models.Entity) (err error) {
+
+	_, err = r.database.Collection("entities").InsertOne(ctx, entity)
 	if err != nil {
-		fmt.Println("Disconnected", err)
+		fmt.Printf("create error %v", err.Error())
 		return
 	}
+	return
+
+	//dataMux.Lock()
+	//defer dataMux.Unlock()
+	//nextID++
+	//entity.ID = nextID
+	//fmt.Println(entity)
+	//_, err := r.collection.InsertOne(context.Background(), entity)
+	//if err != nil {
+	//	fmt.Println("Disconnected", err)
+	//	return
+	//}
+
 }
 
-func Read(id int) (entity.Entity, error) {
-	dataMux.Lock()
-	defer dataMux.Unlock()
-	var entitywithid entity.Entity
-	filter := bson.M{"id": id}
-	err := mongodatabase.Collection.FindOne(context.Background(), filter).Decode(&entitywithid)
-	if err != nil {
-		return entity.Entity{}, errors.New("Entity not found")
-	}
-	return entitywithid, nil
-}
-
-func Update(id int, updatedEntity *entity.Entity) error {
-	dataMux.Lock()
-	defer dataMux.Unlock()
-
-	updatedEntity.ID = id
-	filter := bson.M{"id": id}
-	update := bson.M{"$set": updatedEntity}
-	updateResult, err := mongodatabase.Collection.UpdateOne(context.Background(), filter, update)
-	if err != nil {
-		return errors.New("Error")
-	}
-	if updateResult.MatchedCount == 0 {
-		return errors.New("Entitu not found")
-	}
-	return nil
-}
-
-func Delete(id int) error {
-	dataMux.Lock()
-	defer dataMux.Unlock()
-	filter := bson.M{"id": id}
-	deleteResult, err := mongodatabase.Collection.DeleteOne(context.Background(), filter)
-	if err != nil {
-		return errors.New("Error")
-	}
-	if deleteResult.DeletedCount == 0 {
-		return errors.New("Entity not found")
-	}
-	return nil
-}
+//
+//func Read(id int) (models.Entity, error) {
+//	dataMux.Lock()
+//	defer dataMux.Unlock()
+//	var entitywithid models.Entity
+//	filter := bson.M{"id": id}
+//	err := mongodatabase.Collection.FindOne(context.Background(), filter).Decode(&entitywithid)
+//	if err != nil {
+//		return models.Entity{}, errors.New("Entity not found")
+//	}
+//	return entitywithid, nil
+//}
+//
+//func Update(id int, updatedEntity *models.Entity) error {
+//	dataMux.Lock()
+//	defer dataMux.Unlock()
+//
+//	updatedEntity.ID = id
+//	filter := bson.M{"id": id}
+//	update := bson.M{"$set": updatedEntity}
+//	updateResult, err := mongodatabase.Collection.UpdateOne(context.Background(), filter, update)
+//	if err != nil {
+//		return errors.New("Error")
+//	}
+//	if updateResult.MatchedCount == 0 {
+//		return errors.New("Entitu not found")
+//	}
+//	return nil
+//}
+//
+//func Delete(id int) error {
+//	dataMux.Lock()
+//	defer dataMux.Unlock()
+//	filter := bson.M{"id": id}
+//	deleteResult, err := mongodatabase.Collection.DeleteOne(context.Background(), filter)
+//	if err != nil {
+//		return errors.New("Error")
+//	}
+//	if deleteResult.DeletedCount == 0 {
+//		return errors.New("Entity not found")
+//	}
+//	return nil
+//}
